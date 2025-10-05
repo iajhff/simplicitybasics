@@ -49,11 +49,12 @@ EOF
 
 ### Step 2: Generate Your Contract Address
 
-```bash
-# For simple contracts like this one, simply deposit automatically compiles the source file internally.
-# No separate build step is needed - the tool handles compilation on-demand.
-# For complex contracts with witness data, you may want to pre-build with 'simply build' for debugging.
+# For simple contracts like this one, simply deposit automatically compiles 
+# the source file internally. No separate build step is needed - the tool 
+# handles compilation on-demand. For complex contracts with witness data, you 
+# may want to pre-build with 'simply build' for debugging.
 
+```bash
 simply deposit --entrypoint contract.simf
 ```
 
