@@ -198,10 +198,11 @@ elements-cli -chain=liquidtestnet stop
 hal is a Bitcoin companion tool for key management and signing.
 
 ```bash
-# Install hal
 cargo install hal
+```
 
-# Verify installation
+**Verify installation:**
+```bash
 hal --version
 ```
 
@@ -219,15 +220,11 @@ hal-simplicity is the Simplicity extension for hal that provides:
 - Simplicity-specific transaction operations
 
 ```bash
-# Clone and build hal-simplicity
-git clone https://github.com/apoelstra/hal
-cd hal
-cargo build --release
+cargo install hal-simplicity
+```
 
-# Install to system
-sudo cp target/release/hal /usr/local/bin/hal-simplicity
-
-# Verify installation
+**Verify installation:**
+```bash
 hal-simplicity --version
 ```
 
@@ -247,17 +244,18 @@ hal-simplicity --version
 simply is the official SimplicityHL CLI tool for building and deploying contracts:
 
 ```bash
-# Install from GitHub
 cargo install --git https://github.com/starkware-bitcoin/simply simply
+```
 
-# Verify installation
-simply --help
+**Verify installation:**
+```bash
+simply --version
 ```
 
 **What simply does:**
 - Compiles and runs SimplicityHL programs
 - Generates deposit addresses (`simply deposit`)
-- Builds and broadcasts spending transactions (`simply withdraw`) (automatically connected to testnet esplora)
+- Builds and broadcasts spending transactions (`simply withdraw`)
 - Handles control block generation and witness encoding automatically
 
 **Code Reference:**
