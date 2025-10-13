@@ -4,10 +4,11 @@ A guide to deploying Simplicity smart contracts on Liquid testnet using Simplici
 
 
 ## TODO
-1. Clarify and fix control block issue and best practice
-2. Finalize way to build transaction json with hal-simplicity instead of simply 
+1. Replace simple_tx_tool with official way to build transaction with correct control block (can not mix control blocks)
+2. bug test simple_tx_tool and consider adding working functionality to hal simplicity as need [Simple_TX_Tool_Sample_Code](https://github.com/iajhff/simplicitytxtool)
 
 ---
+
 
 ## Table of Contents
 
@@ -25,7 +26,7 @@ A guide to deploying Simplicity smart contracts on Liquid testnet using Simplici
 
 ### What is Simplicity?
 
-Simplicity is a low-level, formally verifiable programming language designed specifically for Blockstream Liquid and potentially Bitcoin smart contracts. Unlike traditional smart contract languages, Simplicity prioritizes:
+Simplicity is a low-level, formally verifiable programming language designed specifically for blockchain smart contracts. Unlike traditional smart contract languages, Simplicity prioritizes:
 
 - **Formal Verification**: Programs can be mathematically proven to be correct
 - **Static Analysis**: Resource usage (CPU, memory) is known before execution
@@ -35,8 +36,8 @@ Simplicity is a low-level, formally verifiable programming language designed spe
 ### How Simplicity Fits into Liquid and Bitcoin
 
 **Current Status:**
-- **Liquid Network**: Simplicity is currently active on Liquid testnet and Liquid mainnet
-- **Bitcoin**: Simplicity is designed for Bitcoin but requires a soft fork activation which if consensus is reached may happen.
+- **Liquid Network**: Simplicity is currently active on Liquid testnet and will soon be available on Liquid mainnet
+- **Bitcoin**: Simplicity is designed for Bitcoin but requires a soft fork activation (future)
 
 **Architecture:**
 - Simplicity programs are deployed as **Taproot script paths** (P2TR)
@@ -54,7 +55,7 @@ Simplicity is a low-level, formally verifiable programming language designed spe
 3. **Commit**: The program's CMR (Commitment Merkle Root) is computed
    - *Implementation*: [`rust-simplicity/src/merkle/cmr.rs`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/src/merkle/cmr.rs) - Merkle root that commits to program structure
 4. **Address**: A P2TR address is derived from the CMR
-5. **Fund**: LBTC or Testnet-LBTC is sent to the address
+5. **Fund**: Bitcoin/Liquid is sent to the address
 6. **Spend**: To spend, you provide:
    - The Simplicity program
    - Witness data (signatures, hash preimages, etc.)
@@ -71,6 +72,44 @@ The program has access to transaction data (sighash) through **jets** like `jet:
 - **Jets**: Optimized native implementations of common operations. For example, `jet::bip_0340_verify` is implemented in [`rust-simplicity/simplicity-sys/depend/simplicity/jets-secp256k1.c`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/simplicity-sys/depend/simplicity/jets-secp256k1.c#L649-L665) (C) with Rust bindings
 - **Sighash**: Computed in [`rust-simplicity/src/policy/sighash.rs`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/src/policy/sighash.rs#L83-L94) using `ElementsEnv::c_tx_env().sighash_all()`
 - **Transaction Environment**: Elements-specific environment built in [`rust-simplicity/simplicity-sys/depend/simplicity/elements/txEnv.c`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/simplicity-sys/depend/simplicity/elements/txEnv.c)
+
+### The Benefits of Simplicity
+
+#### 1. **Formal Verification**
+- Programs can be mathematically proven correct
+- No runtime errors or undefined behavior
+- Security properties verified before deployment
+
+#### 2. **Predictable Resource Usage**
+- CPU cost known at parse time
+- No gas estimation needed
+- No out-of-gas failures
+
+#### 3. **Static Analysis**
+- All execution paths analyzable before running
+- Can prove programs always terminate
+- Can verify security properties (e.g., "funds never locked")
+
+#### 4. **Covenants**
+- Full access to transaction structure
+- Can enforce spending conditions (amount, destination, etc.)
+- Enables advanced use cases (vaults, atomic swaps, inheritance, etc.)
+
+#### 5. **Compatibility**
+- Uses Bitcoin's Taproot (P2TR)
+- Works with existing wallet infrastructure
+- Schnorr signatures (BIP-340)
+
+#### 6. **Efficiency**
+- Jets provide native-speed operations
+- Optimized for common operations (signature verification, hashing)
+- Smaller on-chain footprint than alternatives
+
+#### 7. **Developer Experience**
+- SimplicityHL looks like Rust
+- Type safety and type inference
+- Clear error messages
+- VSCode extension available
 
 ---
 
@@ -206,29 +245,28 @@ hal-simplicity --version
 - The sighash command builds `ElementsEnv` and calls `c_tx_env().sighash_all()`
 - Under the hood: [`rust-simplicity/simplicity-sys/src/c_jets/c_env/elements.rs`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/simplicity-sys/src/c_jets/c_env/elements.rs#L150-L153)
 
-### e) Install simply
+### e) Install simplicity_tx_tool
 
-simply is a helper tool created by the starkware bitcoin community, which integrates directly into the esplora testnet:
+simplicity_tx_tool builds complete Simplicity transactions with proper witness encoding. It uses the **same taproot construction as hal-simplicity and Web IDE**, ensuring compatibility.
 
 ```bash
-cargo install --git https://github.com/starkware-bitcoin/simply simply
+cargo install --git https://github.com/iajhff/simplicitytxtool
 ```
 
 **Verify installation:**
 ```bash
-simply --version
+simplicity_tx_tool --help
 ```
 
-**What simply does:**
-- Compiles and runs SimplicityHL programs
-- Generates deposit addresses (`simply deposit`)
-- Builds and broadcasts spending transactions (`simply withdraw`)
-- Handles control block generation and witness encoding automatically
+**What simplicity_tx_tool does:**
+- Builds complete transactions from contract + witness + UTXO data
+- Handles control block generation automatically
+- Encodes witness stack properly: `[witness_bytes, program_bytes, cmr, control_block]`
+- Compatible with hal-simplicity addresses (uses same internal key)
 
 **Code Reference:**
-- Transaction building: [`simply/src/transaction.rs`](https://github.com/starkware-bitcoin/simply/blob/master/src/transaction.rs)
-- Uses simfony library for compilation
-- Integrates with Blockstream Esplora API for UTXO fetching and broadcasting
+- Based on simfony library and Web IDE code
+- Uses same taproot construction as Web IDE: [`simplicity-webide/src/util.rs`](https://github.com/BlockstreamResearch/simplicity-webide/blob/master/src/util.rs#L155-L219)
 
 ### Verification
 
@@ -240,7 +278,7 @@ simc --help
 elements-cli --help
 hal --version
 hal-simplicity --version
-simply --help
+simplicity_tx_tool --help
 
 # All should return successfully
 echo "All tools installed successfully"
@@ -338,31 +376,32 @@ elements-cli -chain=liquidtestnet getaddressinfo <confidential_address>
 
 Look for the `"unconfidential"` field in the output (starts with `tex1q...`). This is your destination address.
 
-### e) Spend from Contract
+### e) Build and Broadcast Transaction
 
-Use `simply withdraw` to build and broadcast the spending transaction:
+Use `simplicity_tx_tool` to build the complete transaction:
 
 ```bash
-simply withdraw --entrypoint simple.simf --txid <funding_txid> --destination <destination_address>
+simplicity_tx_tool build-tx simple.simf <funding_txid> 0 100000 <destination_address> 1000 empty.wit
 ```
 
 **Replace:**
 - `<funding_txid>` - Transaction ID from step (c)
 - `<destination_address>` - Unconfidential address from step (d)
 
-**Why use simply here:**
-This step requires building the complete transaction with the Simplicity witness stack, which needs:
-- Control block computation from CMR (requires taproot library)
-- Witness stack encoding: `[witness_bytes, program_bytes, cmr, control_block]`
-- Transaction finalization
+**What this does:**
+- Compiles the contract
+- Builds transaction with witness stack: `[witness_bytes, program_bytes, cmr, control_block]`
+- Uses same taproot construction as hal-simplicity (compatible!)
+- Outputs complete transaction hex
 
-`simply withdraw` handles all of this automatically using the simfony library.
+**Output:** Transaction hex ready to broadcast
 
-**Output:**
+**Broadcast the transaction:**
+```bash
+curl -X POST "https://blockstream.info/liquidtestnet/api/tx" -d "<transaction_hex>"
 ```
-Transaction broadcast successfully!
-Txid: abc123def456...
-```
+
+**Response:** Transaction ID (txid)
 
 ### f) Check Transaction Status
 
@@ -394,21 +433,19 @@ curl "https://blockstream.info/liquidtestnet/api/tx/<txid>/status"
 2. Compile and generate address (simc + hal-simplicity)
 3. Fund address (faucet)
 4. Generate destination (`elements-cli getnewaddress`)
-5. Spend (`simply withdraw`)
+5. Build and broadcast (`simplicity_tx_tool build-tx`)
 
 **Tools used:**
 - simc (compile contracts to Simplicity bytecode)
 - hal-simplicity (generate addresses from programs)
 - elements-cli (generate destination addresses)
-- simply (build complete transaction and broadcast)
+- simplicity_tx_tool (build complete transaction with witness stack)
 
-**Why simply for the final step:**
-Building the complete Simplicity transaction requires the simfony library to:
-- Compute taproot control block from CMR
-- Encode witness stack in proper format
-- Finalize transaction with all Simplicity-specific data
-
-No standalone CLI command can do this without the library.
+**Why these tools work together:**
+- hal-simplicity and simplicity_tx_tool use the **same taproot construction**
+- Same internal key: `0xf5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2`
+- Addresses generated by hal-simplicity can be spent using simplicity_tx_tool
+- Compatible control blocks and witness stacks
 
 ---
 
@@ -528,27 +565,40 @@ elements-cli -chain=liquidtestnet getaddressinfo <confidential_address>
 
 Look for the `"unconfidential"` field in the output (starts with `tex1q...`). This is your destination address.
 
-### e) Note on Sighash and Signing
+### e) Compute Sighash and Sign (Using hal-simplicity - THE NEW METHOD!)
 
-For contracts with witness data, you would normally:
-1. Build the unsigned transaction
-2. Compute sighash using hal-simplicity
-3. Sign the sighash
-4. Add signature to witness file
+For contracts with witness data, you need to sign the transaction.
 
-**However**, `simply withdraw` (used in next step) handles all of this automatically:
-- Builds the transaction
-- Computes sighash correctly
-- Uses the contract's logic to generate/verify signatures
-- Assembles everything into final transaction
+**Build unsigned transaction** (for sighash computation):
 
-For understanding the hal-simplicity sighash method, see the command reference section below.
+Create `tx.json`:
+```json
+{
+  "version": 2,
+  "locktime": 0,
+  "input": [{"txid": "<funding_txid>", "vout": 0, "sequence": 4294967294}],
+  "output": [
+    {"asset": "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49", "value": 99000, "script_pubkey": "<destination_scriptpubkey>"},
+    {"asset": "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49", "value": 1000, "script_pubkey": ""}
+  ]
+}
+```
+
+Create transaction hex:
+```bash
+hal-elements elements tx create tx.json --raw-stdout
+```
+
+**Compute sighash:**
+```bash
+hal-simplicity simplicity sighash <tx_hex> 0 <cmr> <control_block> -v 100000 -a 144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 --utxo-script <funding_scriptpubkey> -g a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1 -s <private_key>
+```
+
+**Note:** Computing the control block requires code. For simplicity, use `simplicity_tx_tool` which computes it automatically (next step).
 
 ### f) Create Witness File
 
-For your own contract, you would create a witness file with your signature. 
-
-For this example using the default key in `simple_p2pk.simf`, create:
+Create a witness file with a dummy signature (for testing):
 
 ```bash
 cat > witness.wit << 'EOF'
@@ -561,47 +611,50 @@ cat > witness.wit << 'EOF'
 EOF
 ```
 
-**Note:** For real contracts, compute the actual signature using hal-simplicity sighash method (see command reference section).
+**For real deployment:** Compute the actual signature using hal-simplicity sighash (see step e), then update this file.
 
-### g) Spend from Contract
+### g) Build and Broadcast Transaction
 
-Use `simply withdraw` to build and broadcast the complete transaction:
+Use `simplicity_tx_tool` to build the complete transaction:
 
 ```bash
-simply withdraw --entrypoint simple_p2pk.simf --txid <funding_txid> --destination <destination_address> --witness witness.wit
+simplicity_tx_tool build-tx simple_p2pk.simf <funding_txid> 0 100000 <destination_address> 1000 witness.wit
 ```
 
 **Replace:**
 - `<funding_txid>` - Transaction ID from step (c)
 - `<destination_address>` - Unconfidential address from step (d)
 
-**What simply withdraw does:**
-1. Fetches UTXO data from Blockstream API
-2. Compiles contract with witness
-3. Computes control block from CMR
-4. Builds transaction with witness stack: `[witness_bytes, program_bytes, cmr, control_block]`
-5. Broadcasts to Liquid testnet
+**What this does:**
+- Compiles contract with witness
+- Computes control block from CMR
+- Builds transaction with witness stack: `[witness_bytes, program_bytes, cmr, control_block]`
+- Uses same taproot construction as hal-simplicity (compatible!)
+- Outputs complete transaction hex
 
-**Output:**
-```
-Transaction broadcast successfully!
-Txid: abc123def456...
+**Output:** Transaction hex
+
+**Broadcast:**
+```bash
+curl -X POST "https://blockstream.info/liquidtestnet/api/tx" -d "<transaction_hex>"
 ```
 
-### k) Check Transaction Status
+**Response:** Transaction ID (txid)
+
+### h) Check Transaction Status
 
 **Check confirmation:**
 ```bash
 curl "https://blockstream.info/liquidtestnet/api/tx/<txid>/status"
 ```
 
+**Wait ~30-60 seconds** and check again if not confirmed.
+
 **Output:**
 ```json
 {
   "confirmed": true,
-  "block_height": 2123456,
-  "block_hash": "...",
-  "block_time": 1759707847
+  "block_height": 2123456
 }
 ```
 
@@ -618,23 +671,20 @@ curl "https://blockstream.info/liquidtestnet/api/tx/<txid>/status"
 2. Compile and generate address (simc + hal-simplicity)
 3. Fund address (faucet)
 4. Generate destination (`elements-cli getnewaddress`)
-5. Create witness file (`witness.wit`)
-6. Spend (`simply withdraw`)
+5. Optionally: Compute sighash using hal-simplicity (educational)
+6. Create witness file (`witness.wit`)
+7. Build and broadcast (`simplicity_tx_tool build-tx`)
 
 **Tools used:**
 - simc (compile to Simplicity bytecode)
-- hal-simplicity (generate addresses)
-- elements-cli (generate destinations)
-- simply (build complete transaction and broadcast)
+- hal-simplicity (generate addresses, compute sighash)
+- elements-cli (generate destination addresses)
+- simplicity_tx_tool (build complete transactions)
 
-**What you learned:**
-- How Simplicity contracts with witness work
-- The witness file format
-- What data is needed for transactions
-- Why the final assembly step needs a library (simfony)
+**Why these tools work together:**
+hal-simplicity and simplicity_tx_tool use the **same taproot construction** (same internal key: `0xf5919fa6...`), so addresses generated by hal-simplicity can be spent using simplicity_tx_tool.
 
-**Alternative:**
-Use the **Web IDE** (Section 4) for a visual interface with the same functionality.
+**Important:** Do not mix with `simply` tool - it uses a different internal key and will generate incompatible addresses!
 
 ---
 
@@ -1073,6 +1123,85 @@ Then in the Parameters tab:
 **Prevention**: Always save your contract code after funding!
 
 ---
+
+### Tips and Best Practices
+
+#### 1. Save Your Code!
+
+**Critical**: Always save your contract code after generating an address and funding it.
+
+- Copy to a file
+- Use version control (git)
+- Keep backups
+
+If you lose your code, you lose access to your funds!
+
+#### 2. Test with Small Amounts
+
+- Testnet is free, but practice good habits
+- Test with default 100,000 sats from faucet
+- Don't try to send large amounts on testnet
+
+#### 3. Use the Browser Console
+
+Open browser DevTools (F12) to see:
+- Compilation errors
+- Detailed error messages
+- Transaction hex before broadcast
+
+#### 4. Regenerate Signatures After Changes
+
+**Remember**: If you change ANY transaction parameter, you must regenerate signatures!
+
+Parameters that affect sighash:
+- Txid
+- Vout
+- Value
+- Destination
+- Fee
+- Lock time
+- Sequence
+
+Changes that DON'T affect sighash:
+- Witness data (signatures, preimages)
+- Comments in code
+
+#### 5. Start Simple
+
+Before complex contracts:
+1. Deploy a simple `fn main() { () }` contract
+2. Then try P2PK (default example)
+3. Then add timelocks
+4. Then try multisig
+5. Finally, build custom logic
+
+#### 6. Use Example Programs
+
+The Web IDE includes example programs:
+- Check the examples in the SimplicityHL repository
+- Study how they structure witness data
+- Understand the jets they use
+
+---
+
+### Comparing Web IDE vs Command Line
+
+| Feature | Web IDE | hal-simplicity CLI |
+|---------|---------|-------------------|
+| **Installation** | None (browser) | Requires Rust, tools |
+| **Ease of Use** | Very Easy | Moderate |
+| **Flexibility** | Limited (1 input/output) | Full control |
+| **Key Management** | Built-in | Use hal/elements-cli |
+| **Sighash Method** | Automatic | Manual (hal-simplicity) |
+| **Witness Encoding** | Automatic | Manual |
+| **Transaction Building** | Automatic | Manual |
+| **Broadcasting** | Via explorer | Via curl/elements-cli |
+| **Confidential Txs** | No | Yes (with Elements) |
+| **Custom Assets** | No | Yes |
+| **Multiple Inputs** | No | Yes |
+| **Mainnet** | Testnet only | Any network |
+| **Offline Signing** | No | Yes |
+| **Best For** | Learning, testing | Production, custom needs |
 
 **Recommendation:**
 - **Beginners**: Start with Web IDE
@@ -1574,11 +1703,31 @@ curl "https://liquidtestnet.com/faucet?address=tex1p9jcvyz...&action=lbtc"
 
 ---
 
+## Troubleshooting
+
+### Common Errors
+
+#### "invalid Simplicity program"
+- **Cause**: Incorrect base64 encoding or corrupted program
+- **Solution**: Re-compile with `simc` and verify base64 output
+
+#### "Assertion failed inside jet"
+- **Cause**: Witness data doesn't satisfy program constraints (wrong signature, etc.)
+- **Solution**: Verify sighash computation and signature are correct
+
+#### "non-mandatory-script-verify-flag"
+- **Cause**: Transaction structure issue or incorrect witness
+- **Solution**: Check transaction construction and control block
+
+#### "bad-txns-inputs-missingorspent"
+- **Cause**: UTXO already spent or doesn't exist
+- **Solution**: Verify funding transaction and output index
+
 ### Getting Help
 
 - **GitHub Issues**: File bug reports with reproducible examples
 - **Documentation**: Check official Simplicity docs
-- **Community**: Ask on telegram https://t.me/simplicity_communicty
+- **Community**: Ask in #simplicity on IRC/Matrix
 
 ---
 
