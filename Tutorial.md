@@ -4,7 +4,7 @@ A guide to deploying Simplicity smart contracts on Liquid testnet using Simplici
 
 
 ## TODO
-1. Replace simple_tx_tool with official way to build transaction with correct control block (can not mix control blocks)
+1. Replace simple_tx_tool with official way to build transaction with correct control block (simply has a different control block, simple_tx_tool uses same)
 2. bug test simple_tx_tool and consider adding working functionality to hal simplicity as need [https://github.com/iajhff/simplicitytxtool](https://github.com/iajhff/simplicitytxtool)
 
 ---
