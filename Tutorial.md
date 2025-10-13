@@ -2,6 +2,11 @@
 
 A guide to deploying Simplicity smart contracts on Liquid testnet using SimplicityHL, hal-simplicity, and Elements Core.
 
+
+## TODO
+1. Clarify and fix control block issue and best practice
+2. Finalize way to build transaction json with hal-simplicity instead of simply 
+
 ---
 
 ## Table of Contents
@@ -241,7 +246,7 @@ hal-simplicity --version
 
 ### e) Install simply
 
-simply is the official SimplicityHL CLI tool for building and deploying contracts:
+simply is a helper tool created by the starkware bitcoin community, which integrates directly into the esplora testnet:
 
 ```bash
 cargo install --git https://github.com/starkware-bitcoin/simply simply
