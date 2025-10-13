@@ -25,7 +25,7 @@ A guide to deploying Simplicity smart contracts on Liquid testnet using Simplici
 
 ### What is Simplicity?
 
-Simplicity is a low-level, formally verifiable programming language designed specifically for blockchain smart contracts. Unlike traditional smart contract languages, Simplicity prioritizes:
+Simplicity is a low-level, formally verifiable programming language designed specifically for Blockstream Liquid and potentially Bitcoin smart contracts. Unlike traditional smart contract languages, Simplicity prioritizes:
 
 - **Formal Verification**: Programs can be mathematically proven to be correct
 - **Static Analysis**: Resource usage (CPU, memory) is known before execution
@@ -35,8 +35,8 @@ Simplicity is a low-level, formally verifiable programming language designed spe
 ### How Simplicity Fits into Liquid and Bitcoin
 
 **Current Status:**
-- **Liquid Network**: Simplicity is currently active on Liquid testnet and will soon be available on Liquid mainnet
-- **Bitcoin**: Simplicity is designed for Bitcoin but requires a soft fork activation (future)
+- **Liquid Network**: Simplicity is currently active on Liquid testnet and Liquid mainnet
+- **Bitcoin**: Simplicity is designed for Bitcoin but requires a soft fork activation which if consensus is reached may happen.
 
 **Architecture:**
 - Simplicity programs are deployed as **Taproot script paths** (P2TR)
@@ -54,7 +54,7 @@ Simplicity is a low-level, formally verifiable programming language designed spe
 3. **Commit**: The program's CMR (Commitment Merkle Root) is computed
    - *Implementation*: [`rust-simplicity/src/merkle/cmr.rs`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/src/merkle/cmr.rs) - Merkle root that commits to program structure
 4. **Address**: A P2TR address is derived from the CMR
-5. **Fund**: Bitcoin/Liquid is sent to the address
+5. **Fund**: LBTC or Testnet-LBTC is sent to the address
 6. **Spend**: To spend, you provide:
    - The Simplicity program
    - Witness data (signatures, hash preimages, etc.)
@@ -1715,7 +1715,7 @@ curl "https://liquidtestnet.com/faucet?address=tex1p9jcvyz...&action=lbtc"
 
 - **GitHub Issues**: File bug reports with reproducible examples
 - **Documentation**: Check official Simplicity docs
-- **Community**: Ask in #simplicity on IRC/Matrix
+- **Community**: Ask on telegram https://t.me/simplicity_communicty
 
 ---
 
