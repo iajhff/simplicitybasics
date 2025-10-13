@@ -257,7 +257,7 @@ simply --help
 **What simply does:**
 - Compiles and runs SimplicityHL programs
 - Generates deposit addresses (`simply deposit`)
-- Builds and broadcasts spending transactions (`simply withdraw`)
+- Builds and broadcasts spending transactions (`simply withdraw`) (automatically connected to testnet esplora)
 - Handles control block generation and witness encoding automatically
 
 **Code Reference:**
