@@ -242,6 +242,28 @@ hal-simplicity --version
 - The sighash command builds `ElementsEnv` and calls `c_tx_env().sighash_all()`
 - Under the hood: [`rust-simplicity/simplicity-sys/src/c_jets/c_env/elements.rs`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/simplicity-sys/src/c_jets/c_env/elements.rs#L150-L153)
 
+### e) Install simplicity_tx_tool
+
+simplicity_tx_tool builds complete Simplicity transactions with proper witness encoding:
+
+```bash
+# Install from GitHub
+cargo install --git https://github.com/iajhff/simplicitytxtool
+
+# Verify installation
+simplicity_tx_tool --help
+```
+
+**What simplicity_tx_tool does:**
+- Builds complete transactions from contract + witness + UTXO data
+- Handles control block generation automatically
+- Encodes witness stack properly for Simplicity
+- Replicates Web IDE transaction building logic
+
+**Code Reference:**
+- Based on simfony library and Web IDE code
+- Uses same transaction building as [`simplicity-webide/src/transaction.rs`](https://github.com/BlockstreamResearch/simplicity-webide/blob/master/src/transaction.rs)
+
 ### Verification
 
 Verify all tools are installed:
@@ -252,6 +274,7 @@ simc --help
 elements-cli --help
 hal --version
 hal-simplicity --version
+simplicity_tx_tool --help
 
 # All should return successfully
 echo "All tools installed successfully"
@@ -349,96 +372,63 @@ elements-cli -chain=liquidtestnet getaddressinfo <confidential_address>
 
 Look for the `"unconfidential"` field in the output (starts with `tex1q...`). This is your destination address.
 
-### e) Build Spending Transaction
+### e) Note on Transaction Building
 
-Create a transaction JSON file (`tx.json`):
+For simple contracts, you can skip manual transaction building. The `simplicity_tx_tool` in step (g) handles this automatically.
+
+If you want to understand the transaction structure, it looks like this:
 
 ```json
 {
   "version": 2,
   "locktime": 0,
-  "input": [
-    {
-      "txid": "<funding_txid>",
-      "vout": 0,
-      "sequence": 4294967294
-    }
-  ],
+  "input": [{"txid": "<funding_txid>", "vout": 0}],
   "output": [
-    {
-      "asset": "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49",
-      "value": 99000,
-      "script_pubkey": "<destination_scriptpubkey>"
-    },
-    {
-      "asset": "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49",
-      "value": 1000,
-      "script_pubkey": ""
-    }
+    {"asset": "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49", "value": 99000},
+    {"asset": "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49", "value": 1000}
   ]
 }
 ```
 
-**Replace:**
-- `<funding_txid>` - Your funding transaction ID
-- `<destination_scriptpubkey>` - Get from: `elements-cli -chain=liquidtestnet getaddressinfo <dest_address>`
+The `simplicity_tx_tool` creates this structure plus the Simplicity witness stack automatically.
 
-**Note:** `value: 99000` = input (100000) - fee (1000)
+### f) Create Empty Witness
 
-**Create the raw transaction:**
+Simple contracts need no witness data:
+
 ```bash
-hal-elements elements tx create tx.json --raw-stdout
+echo '{}' > empty.wit
 ```
 
-Copy the hex output.
+Or create an empty JSON file manually.
 
-### f) Compute Sighash (Optional)
+### g) Build Complete Transaction with simplicity_tx_tool
 
-For simple contracts that always return true, you don't need signatures. But here's how to compute the sighash if you need it:
+For the complete transaction assembly, use **simplicity_tx_tool** which handles the complex witness encoding:
 
+**Install simplicity_tx_tool:**
 ```bash
-hal-simplicity simplicity sighash \
-  <tx_hex> \
-  0 \
-  <cmr> \
-  <control_block> \
-  -v 100000 \
-  -a 144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 \
-  --utxo-script <scriptpubkey> \
-  -g a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1
+cargo install --git https://github.com/iajhff/simplicitytxtool
+```
+
+**Build and broadcast transaction:**
+```bash
+simplicity_tx_tool build-tx simple.simf <funding_txid> 0 100000 <destination_address> 1000 empty.wit
 ```
 
 **Replace:**
-- `<tx_hex>` - Transaction hex from step (e)
-- `<cmr>` - CMR from step (b)
-- `<control_block>` - Taproot control block (compute from CMR/taproot info)
-- `<scriptpubkey>` - Script from funding UTXO
+- `<funding_txid>` - Transaction ID from step (c)
+- `<destination_address>` - Unconfidential address from step (d)
 
-**Note:** Simple contracts don't verify signatures, so this step is educational only.
+**Output:** Complete transaction hex ready to broadcast
 
-### g) Broadcast Transaction
-
-**Note**: Building the final spendable transaction requires:
-1. The compiled Simplicity program
-2. The control block (computed from CMR and taproot construction)
-3. Proper witness stack encoding in Elements transaction format
-
-This is complex and typically done by specialized tools. **For actual deployment, use:**
-- **Simplicity Web IDE** (Section 4 below) - Handles this automatically
-- **simplicity_tx_tool** - CLI tool that replicates Web IDE functionality
-
-**Once you have the complete transaction hex:**
+**Broadcast:**
 ```bash
 curl -X POST "https://blockstream.info/liquidtestnet/api/tx" -d "<transaction_hex>"
 ```
 
-**Successful response:** Transaction ID (txid)  
-**Error response:** Error message
-
-**View your transaction:**
-```
-https://blockstream.info/liquidtestnet/tx/<txid>
-```
+**Alternative: Web IDE**
+The **Simplicity Web IDE** (Section 4) provides the same functionality with a visual interface.
 
 ### h) Check Transaction Status
 
@@ -474,18 +464,19 @@ curl "https://blockstream.info/liquidtestnet/api/address/<destination_address>"
 
 **What this section covered:**
 - Creating a simple contract (always succeeds)
-- Compiling with simc
-- Generating addresses with hal-simplicity  
-- Transaction structure concepts
-- hal-simplicity sighash method
+- Compiling with simc  
+- Generating addresses with hal-simplicity
+- Transaction building basics
+- Complete deployment with simplicity_tx_tool
 
-**What's missing for complete deployment:**
-- Control block generation
-- Final transaction assembly
-- Witness stack encoding
+**Tools needed:**
+- simc (compile contracts)
+- hal-simplicity (generate addresses)
+- elements-cli (generate destination addresses)
+- simplicity_tx_tool (build final transactions)
 
-**For actual deployment:**
-Use the **Web IDE** (Section 4 below) which handles all the complex parts automatically.
+**Alternative:**
+Use the **Web IDE** (Section 4) for a visual interface that handles everything automatically.
 
 ---
 
@@ -648,9 +639,9 @@ hal-elements elements tx create tx.json --raw-stdout
 
 Copy the hex output.
 
-### f) Create Sighash for Witness
+### f) Optional: Manual Sighash Computation (Advanced)
 
-Now we compute the sighash that needs to be signed using **hal-simplicity** (THE NEW METHOD!).
+If you want to understand the sighash computation, you can use **hal-simplicity** directly (THE NEW METHOD!).
 
 **How sighash works:**
 The sighash is computed following BIP-341 (Taproot) with Elements extensions:
@@ -663,70 +654,29 @@ The sighash is computed following BIP-341 (Taproot) with Elements extensions:
 - rust-simplicity: [`src/policy/sighash.rs`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/src/policy/sighash.rs#L83-L94)
 - C implementation: [`elements/txEnv.c`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/simplicity-sys/depend/simplicity/elements/txEnv.c#L11-L26)
 
-**Compute the sighash:**
-```bash
-hal-simplicity simplicity sighash \
-  <tx_hex> \
-  0 \
-  <cmr> \
-  <control_block> \
-  -v 100000 \
-  -a 144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 \
-  --utxo-script <scriptpubkey> \
-  -g a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1
-```
+**Note:** You can skip this and use `simplicity_tx_tool` in step (i) which computes sighash automatically.
 
-**Replace:**
-- `<tx_hex>` - Transaction hex from step (e)
-- `<cmr>` - CMR from step (b)
-- `<control_block>` - Taproot control block (compute from CMR/taproot info)
-- `<scriptpubkey>` - Script from funding UTXO
+### g) Optional: Manual Schnorr Signing (Advanced)
 
-**Output:**
-```json
-{
-  "sighash": "abc123def456..."
-}
-```
-
-Copy the sighash value.
-
-### g) Schnorr Signing
-
-Sign the sighash with your private key using hal:
+If computing sighash manually, sign it:
 
 ```bash
 hal key schnorr-sign <private_key> <sighash>
 ```
 
-**OR** use hal-simplicity with built-in signing (easier):
+**Or** use hal-simplicity with built-in signing:
 
 ```bash
-hal-simplicity simplicity sighash \
-  <tx_hex> \
-  0 \
-  <cmr> \
-  <control_block> \
-  -v 100000 \
-  -a 144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 \
-  --utxo-script <scriptpubkey> \
-  -g a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1 \
-  -s <private_key>
+hal-simplicity simplicity keypair generate
 ```
 
-**Output:**
-```json
-{
-  "sighash": "abc123...",
-  "signature": "f74b3ca574647f8595624b129324afa2..."
-}
-```
+Then use the private key to sign.
 
-Copy the signature (64 bytes / 128 hex characters).
+**Note:** You can skip this and use `simplicity_tx_tool` which handles signing with the embedded key automatically.
 
-### h) Add Correct Witness Data
+### h) Witness Data
 
-Update `examples/p2pk.wit` with your signature:
+The `examples/p2pk.wit` file already contains a valid signature for the default key:
 
 ```json
 {
@@ -737,42 +687,39 @@ Update `examples/p2pk.wit` with your signature:
 }
 ```
 
-Replace the value with your actual signature from step (g).
+**For your own contract:** You would replace this with the signature from step (g). But for testing with the example files, you can use them as-is.
 
-### i) Build Final Transaction
+### i) Build Complete Transaction with simplicity_tx_tool
 
-**Compile contract with witness:**
+Use **simplicity_tx_tool** to build the final transaction with witness:
+
 ```bash
-simc examples/p2pk.simf examples/p2pk.args examples/p2pk.wit
+simplicity_tx_tool build-tx examples/p2pk.simf <funding_txid> 0 100000 <destination_address> 1000 examples/p2pk.wit
 ```
 
-This outputs the complete Simplicity program with witness data encoded.
+**Replace:**
+- `<funding_txid>` - Transaction ID from step (c)
+- `<destination_address>` - Unconfidential address from step (d)
 
-**Note**: Building the final spendable transaction requires:
-1. The compiled program with witness (from above)
-2. The control block (computed from CMR and taproot construction)
-3. Proper witness stack encoding in Elements transaction format
+**What simplicity_tx_tool does:**
+1. Compiles contract with witness using simfony library
+2. Computes control block from CMR
+3. Builds witness stack: `[witness_data, program_bytes, cmr, control_block]`
+4. Creates complete Elements transaction
+5. Outputs transaction hex ready to broadcast
 
-This is complex and typically done by specialized tools. **For actual deployment, use:**
-- **Simplicity Web IDE** (Section 4) - Handles this automatically
-- **simplicity_tx_tool** - CLI tool that replicates Web IDE functionality
+**Code Reference:** Based on the same code as the Web IDE - [`simplicity-webide/src/transaction.rs`](https://github.com/BlockstreamResearch/simplicity-webide/blob/master/src/transaction.rs#L93-L109)
 
-**Why this is complex:**
-- Taproot witness stack encoding
-- Control block construction
-- Script witness format
-- Transaction finalization
+### j) Broadcast the Transaction
 
-### j) Broadcasting the Transaction
-
-Once you have the complete transaction hex:
+Broadcast the transaction hex from step (i):
 
 ```bash
 curl -X POST "https://blockstream.info/liquidtestnet/api/tx" -d "<transaction_hex>"
 ```
 
-**Successful response:** Transaction ID (txid)
-**Error response:** Error message
+**Successful response:** Transaction ID (txid)  
+**Error response:** Error message  
 
 **View your transaction:**
 ```
@@ -802,28 +749,23 @@ curl "https://blockstream.info/liquidtestnet/api/tx/<txid>/status"
 
 ---
 
-### Summary: CLI Deployment
+### Summary: P2PK Deployment
 
-**What we covered:**
-- Using actual `p2pk.simf`, `p2pk.args`, and `p2pk.wit` files
+**What this section covered:**
+- Using actual `p2pk.simf`, `p2pk.args`, and `p2pk.wit` files  
 - hal-simplicity sighash computation (the new method!)
-- BIP-340 Schnorr signing
+- BIP-340 Schnorr signing with hal or hal-simplicity
 - Witness data format
+- Complete deployment with simplicity_tx_tool
 
-**What's missing for complete deployment:**
-- Control block generation (requires taproot construction)
-- Final transaction assembly with witness stack
-- Witness encoding in Elements format
+**Tools needed:**
+- simc (compile contracts)
+- hal-simplicity (generate addresses, compute sighash, sign)
+- elements-cli (generate destination addresses)
+- simplicity_tx_tool (build final transactions)
 
-**For actual deployment, use:**
-1. **Web IDE** (Section 4 below) - Easiest, handles everything automatically
-2. **simplicity_tx_tool** - CLI alternative that handles the complex parts
-
-**This section taught you:**
-- The concepts and workflow
-- The hal-simplicity sighash method
-- How signatures work with Simplicity
-- What happens under the hood
+**Alternative:**
+Use the **Web IDE** (Section 4) for a visual interface with the same functionality.
 
 ---
 
