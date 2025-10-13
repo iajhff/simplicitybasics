@@ -10,8 +10,9 @@ A guide to deploying Simplicity smart contracts on Liquid testnet using Simplici
 2. [Installing the Toolchain](#1-installing-the-necessary-toolchain)
 3. [Deploying a Simple Contract](#2-deploying-simple-contract)
 4. [Deploying a Contract with Witness](#3-deploying-contract-with-witness)
-5. [Next Steps](#next-steps)
-6. [Useful Command List](#useful-command-list)
+5. [Using the Simplicity Web IDE](#4-using-the-simplicity-web-ide)
+6. [Next Steps](#next-steps)
+7. [Useful Command List](#useful-command-list)
 
 ---
 
@@ -34,7 +35,7 @@ Simplicity is a low-level, formally verifiable programming language designed spe
 
 **Architecture:**
 - Simplicity programs are deployed as **Taproot script paths** (P2TR)
-- Programs execute in a **stack-based virtual machine**
+- Programs execute in a **bit machine** (not stack-based)
 - Uses **jets** (optimized opcodes) for common operations like signature verification
 - Compatible with **BIP-340 Schnorr signatures** and **BIP-341 Taproot**
 
@@ -86,7 +87,7 @@ The program has access to transaction data (sighash) through **jets** like `jet:
 #### 4. **Covenants**
 - Full access to transaction structure
 - Can enforce spending conditions (amount, destination, etc.)
-- Enables advanced use cases (vaults, DEXs, inheritance, etc.)
+- Enables advanced use cases (vaults, atomic swaps, inheritance, etc.)
 
 #### 5. **Compatibility**
 - Uses Bitcoin's Taproot (P2TR)
@@ -237,7 +238,7 @@ hal-simplicity --version
 - Creates and decodes Simplicity transactions
 
 **Code Reference:**
-- hal-simplicity sighash implementation: [`test.rs`](https://github.com/apoelstra/hal/blob/master/test.rs#L138-L256) (in this repo)
+- hal-simplicity sighash implementation: [`test.rs`](../test.rs#L138-L256) (in parent directory)
 - The sighash command builds `ElementsEnv` and calls `c_tx_env().sighash_all()`
 - Under the hood: [`rust-simplicity/simplicity-sys/src/c_jets/c_env/elements.rs`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/simplicity-sys/src/c_jets/c_env/elements.rs#L150-L153)
 
@@ -1557,7 +1558,7 @@ hal-simplicity simplicity sighash \
 - This command constructs an `ElementsEnv` with all transaction and UTXO data
 - Calls `c_tx_env().sighash_all()` which computes BIP-341 style sighash
 - If `-s` is provided, signs the sighash using BIP-340 Schnorr signatures
-- Implementation: [`test.rs`](./test.rs#L107-L256) in this repository
+- Implementation: [`test.rs`](../test.rs#L107-L256) in parent directory
 
 #### Generate Keypair
 ```bash
