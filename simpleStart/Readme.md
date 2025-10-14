@@ -146,6 +146,7 @@ hal-simplicity simplicity simplicity info <base64>    # Get contract info includ
 Complete Simplicity workflow tool from [starkware-bitcoin/simply](https://github.com/starkware-bitcoin/simply)
 ```bash
 # Build operations
+# Simply uses a different internal key to web-ide or hal simplicity 
 simply build --entrypoint src/main.simf               # Basic build
 simply build --entrypoint src/main.simf --target-dir target  # Build to specific directory
 simply build --witness witness.json --prune           # Build with witness and pruning
