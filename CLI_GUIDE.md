@@ -7,7 +7,7 @@ This guide is for advanced users who want command-line control over Simplicity c
 
 **For most users:** We recommend using the [Web IDE](./README.md) instead - it's much easier and works immediately in your browser!
 
--For an alternative developer tool visit: https://github.com/starkware-bitcoin/simply Simply uses a different internal key so do not mix and match with other tools.
+- For an alternative developer tool visit: https://github.com/starkware-bitcoin/simply Simply uses a different internal key so do not mix and match with other tools.
 
 ---
 
