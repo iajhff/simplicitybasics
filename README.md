@@ -1,6 +1,7 @@
 # Simplicity on Liquid: Getting Started
 
 The easiest way to deploy Simplicity smart contracts on Liquid testnet using the Web IDE.
+Not directly affiliated with Blockstream or Simplicity-Lang
 
 ---
 
