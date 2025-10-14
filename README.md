@@ -3,6 +3,11 @@
 - The easiest way to deploy Simplicity smart contracts on Liquid testnet using the Web IDE.
 - Guide Not directly affiliated with Blockstream or Simplicity-Lang
 
+[Developer Documentation](https://docs.simplicity-lang.org/documentation/how-simplicity-works/)
+[SimplicityHL Rust Docs](https://docs.rs/simplicityhl/latest/simplicityhl/)
+[SimplicityHL Repo](https://github.com/BlockstreamResearch/SimplicityHL)
+[SimplicityHL Code Examples](https://github.com/BlockstreamResearch/SimplicityHL/tree/master/examples)
+
 ---
 
 ## Table of Contents
