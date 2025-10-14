@@ -489,10 +489,16 @@ This guide is for advanced users who want command-line control over Simplicity c
   hal-elements elements tx create tx.json --raw-stdout
   ```
 
-  **Compute sighash:**
+  **Compute sighash:** (may not merged into main yet)
   ```bash
   hal-simplicity simplicity sighash <tx_hex> 0 <cmr> <control_block> -v 100000 -a 144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 --utxo-script <funding_scriptpubkey> -g a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1 -s <private_key>
   ```
+OR
+
+```bash
+simplicity_tx_tool sighash <contract.simf> <txid> <vout> <value> <destination> <fee>
+```
+  
 
   **Note:** Computing the control block requires code. For simplicity, use `simplicity_tx_tool` which computes it automatically (next step).
 
