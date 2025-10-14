@@ -77,7 +77,6 @@ The program has access to transaction data (sighash) through **jets** like `jet:
 
 #### 1. **Formal Verification**
 - Programs can be mathematically proven correct
-- No runtime errors or undefined behavior
 - Security properties verified before deployment
 
 #### 2. **Predictable Resource Usage**
@@ -103,13 +102,11 @@ The program has access to transaction data (sighash) through **jets** like `jet:
 #### 6. **Efficiency**
 - Jets provide native-speed operations
 - Optimized for common operations (signature verification, hashing)
-- Smaller on-chain footprint than alternatives
+- Small on-chain footprint
 
 #### 7. **Developer Experience**
 - SimplicityHL looks like Rust
 - Type safety and type inference
-- Clear error messages
-- VSCode extension available
 
 ---
 
