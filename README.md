@@ -86,6 +86,10 @@ The program has access to transaction data (sighash) through **jets** like `jet:
 - Direct broadcast to testnet
 - Real-time error checking
 
+**Constants:**
+- Testnet Blockhash: a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1
+- Internal Key: 0xf5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2
+
 **Source**: https://github.com/BlockstreamResearch/simplicity-webide
 
 ---
