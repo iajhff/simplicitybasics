@@ -32,7 +32,7 @@ This guide is for advanced users who want command-line control over Simplicity c
   source ~/.cargo/env
 
   # Install SimplicityHL compiler (simc)
-  cargo install SimplcityHL
+  cargo install simplcityhl
 
   # Verify installation
   simc --help
