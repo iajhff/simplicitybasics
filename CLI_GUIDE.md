@@ -196,17 +196,11 @@ This guide is for advanced users who want command-line control over Simplicity c
 
   ```bash
   cat > simple.simf << 'EOF'
-  // Simple contract: always returns true
   fn main() {
-      ()  // Unit type - always succeeds
+      ()  
   }
   EOF
   ```
-
-  **Explanation:**
-  - `fn main()` is the entry point
-  - `()` is the unit type, equivalent to `true`
-  - This contract can be spent by anyone (no conditions)
 
   ### b) Compile Contract and Generate Address
 
