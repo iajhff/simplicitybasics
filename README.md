@@ -297,7 +297,7 @@ While stateless, Simplicity's formal verification capabilities and expressive po
 #### Report Issues
 - **GitHub Issues**: Report bugs or request features
   - SimplicityHL: https://github.com/BlockstreamResearch/SimplicityHL/issues
-  - hal-simplicity: https://github.com/apoelstra/hal/issues
+  - hal-simplicity: https://github.com/blockstreamresearch/hal-simplicity/issues
 
 #### Contribute Code
 1. Fork a core repository [Blockstream Research](https://github.com/BlockstreamResearch/)
