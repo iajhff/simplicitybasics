@@ -102,10 +102,10 @@ Open https://ide.simplicity-lang.org in your browser. You'll see a default P2PK 
 
 You can customize it or use example contracts like:
 
-**Simple contract (always succeeds):**
+**Simple contract**
 ```rust
 fn main() {
-    ()  // Always returns true
+    ()
 }
 ```
 
