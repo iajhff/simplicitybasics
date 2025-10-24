@@ -464,8 +464,6 @@ fn main() {
 
 ### Compile with Witness
 
-**If simc has serde feature enabled:**
-
 ```bash
 simc p2pk_contract.simf witness.wit
 ```
