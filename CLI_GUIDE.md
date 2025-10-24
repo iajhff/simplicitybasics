@@ -234,10 +234,7 @@ echo "Program: ${PROGRAM_HEX:0:50}..."
 curl "https://liquidtestnet.com/faucet?address=${ADDRESS}&action=lbtc"
 ```
 
-**Wait 60 seconds for confirmation:**
-```bash
-echo "Waiting 60 seconds..." && sleep 60
-```
+**Wait 15-30 seconds for confirmation:**
 
 ---
 
