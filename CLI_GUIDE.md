@@ -163,8 +163,8 @@ echo "$RESULT"
 ## Step 1: Generate Test Keypair
 
 ```bash
-# Generate a new keypair using hal-sig
-KEYPAIR=$(./hal-sig simplicity keypair generate)
+# Generate a new keypair using hal-simplicity
+KEYPAIR=$(hal-simplicity simplicity keypair generate)
 echo "$KEYPAIR" | jq '.'
 ```
 
@@ -215,8 +215,8 @@ simc p2pk_contract.simf
 
 ```bash
 PROGRAM_B64=$(simc p2pk_contract.simf 2>&1 | awk 'NR==2')
-CMR=$(./hal-sig simplicity simplicity info "$PROGRAM_B64" 2>&1 | jq -r '.cmr')
-ADDRESS=$(./hal-sig simplicity simplicity info "$PROGRAM_B64" 2>&1 | jq -r '.liquid_testnet_address_unconf')
+CMR=$(hal-simplicity simplicity simplicity info "$PROGRAM_B64" 2>&1 | jq -r '.cmr')
+ADDRESS=$(hal-simplicity simplicity simplicity info "$PROGRAM_B64" 2>&1 | jq -r '.liquid_testnet_address_unconf')
 PROGRAM_HEX=$(echo -n "$PROGRAM_B64" | base64 -d | xxd -p | tr -d '\n')
 CONTROL_BLOCK="bef5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2"
 
@@ -324,12 +324,12 @@ echo "ScriptPubKey: $SCRIPT_PUBKEY"
 
 **Convert unsigned transaction to hex:**
 ```bash
-UNSIGNED_TX_HEX=$(cat unsigned_tx.json | ./hal-sig simplicity tx create)
+UNSIGNED_TX_HEX=$(cat unsigned_tx.json | hal-simplicity simplicity tx create)
 ```
 
 **Calculate sighash AND sign**
 ```bash
-SIGHASH_RESULT=$(./hal-sig simplicity simplicity sighash \
+SIGHASH_RESULT=$(hal-simplicity simplicity simplicity sighash \
   "$UNSIGNED_TX_HEX" \
   0 \
   "$CMR" \
@@ -413,7 +413,7 @@ cat final_tx.json | jq '.inputs[0].witness.script_witness | map(length)'
 ## Step 12: Convert to Raw Hex
 
 ```bash
-TX_HEX=$(cat final_tx.json | ./hal-sig simplicity tx create)
+TX_HEX=$(cat final_tx.json | hal-simplicity simplicity tx create)
 echo "Transaction hex length: ${#TX_HEX}"
 echo "First 100 chars: ${TX_HEX:0:100}..."
 ```
