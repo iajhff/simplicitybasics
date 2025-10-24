@@ -5,7 +5,7 @@
 ## Helpful Constants
 
 - Internal Key: `f5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2` (x-only pub key (not spendable))
-- Control Block: `bef5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2` (derived from internal key)
+- Control Block: `bef5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2` (derived from internal key (single leaf only))
 - Testnet L-BTC Asset ID: `144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49`
 - Testnet Genesis Hash: `a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1`
 
