@@ -1,571 +1,480 @@
-# Simplicity CLI Deployment Guide
+# Simplicity No Signature Contract
 
-**Status: Work in Progress, Better Tool-chain is being developed**
-- Not affiliated with Blockstream or Simplicity-lang 
+- Requirements: hal-simplicity (https://github.com/apoelstra/hal-simplicity/tree/2025-10/sighash), curl, jq, base64, xxd
 
-This guide is for advanced users who want command-line control over Simplicity contract deployment. It demonstrates the **hal-simplicity sighash method** and provides full control over the deployment process.
+## Helpful Constants
 
-**For most users:** We recommend using the [Web IDE](./README.md) instead - it's much easier and works immediately in your browser!
-
-- For an alternative developer tool visit: https://github.com/starkware-bitcoin/simply Simply uses a different internal key so do not mix and match with other tools.
-
----
-
-## 3. Installing the CLI Toolchain
-
-**Note:** This section is for advanced users who want command-line control. If you just want to deploy contracts, use the **Web IDE** (Section 2) instead.
-
-### Prerequisites
-
-- **Operating System**: Linux, macOS, or WSL2 on Windows
-- **Rust**: Version 1.78.0 or higher
-- **Git**: For cloning repositories
-- **curl**: For API interactions
-
-### a) Install SimplicityHL (simc compiler)
-
-  SimplicityHL is the high-level language compiler that generates Simplicity bytecode.
-
-  ```bash
-  # Install Rust if you don't have it
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-  source ~/.cargo/env
-
-  # Install SimplicityHL compiler (simc)
-  cargo install simplcityhl
-
-  # Verify installation
-  simc --help
-  ```
-
-  **What simc does:**
-  - Compiles `.simf` files (SimplicityHL) to Simplicity bytecode
-  - Outputs base64-encoded programs
-  - Validates program structure and types
-
-  **Code Reference:**
-  - Compiler implementation: [`SimplicityHL/src/compile.rs`](https://github.com/BlockstreamResearch/SimplicityHL/blob/master/src/compile.rs)
-  - Entry point: `Program::compile()` method that transforms AST to Simplicity nodes
-  - Translation semantics: [`SimplicityHL/doc/translation.md`](https://github.com/BlockstreamResearch/SimplicityHL/blob/master/doc/translation.md)
-
-  ### b) Install Elements Core
-
-  Elements Core is required for:
-  - Generating destination addresses
-  - Getting private keys for signing
-  - (Optional) Running a local testnet node
-
-  **Download and install:**
-
-  ```bash
-  # Download from GitHub releases
-  # https://github.com/ElementsProject/elements/releases
-  # Get the latest version for your OS
-
-  # For Ubuntu/Debian:
-  wget https://github.com/ElementsProject/elements/releases/download/elements-23.2.3/elements-23.2.3-x86_64-linux-gnu.tar.gz
-  tar -xzf elements-23.2.3-x86_64-linux-gnu.tar.gz
-  sudo cp elements-23.2.3/bin/* /usr/local/bin/
-
-  # For macOS:
-  wget https://github.com/ElementsProject/elements/releases/download/elements-23.2.3/elements-23.2.3-osx64.tar.gz
-  tar -xzf elements-23.2.3-osx64.tar.gz
-  sudo cp elements-23.2.3/bin/* /usr/local/bin/
-
-  # Verify installation
-  elements-cli --version
-  ```
-
-  **Start Elements in Liquid testnet mode:**
-
-  ```bash
-  # Start daemon
-  elementsd -chain=liquidtestnet -validatepegin=0 -daemon
-
-  # Wait 30 seconds for initialization
-  sleep 30
-
-  # Create wallet
-  elements-cli -chain=liquidtestnet createwallet "simplicity"
-
-  # Verify it's running
-  elements-cli -chain=liquidtestnet getblockchaininfo
-  ```
-
-  **Note**: You don't need to wait for blockchain sync! You can generate keys immediately.
-
-  **Stop Elements later:**
-  ```bash
-  elements-cli -chain=liquidtestnet stop
-  ```
-
-  ### c) Install hal
-
-  hal is a Bitcoin companion tool for key management and signing.
-
-  ```bash
-  cargo install hal
-  ```
-
-  **Verify installation:**
-  ```bash
-  hal --version
-  ```
-
-  **What hal does:**
-  - Generate keypairs
-  - Sign messages with Schnorr signatures (BIP-340)
-  - Verify signatures
-  - Key manipulation (derive, inspect, etc.)
-
-  ### d) Install hal-simplicity
-
-  hal-simplicity is the Simplicity extension for hal that provides:
-  - Sighash computation for Simplicity transactions
-  - Program parsing and address generation
-  - Simplicity-specific transaction operations
-
-  ```bash
-  cargo install hal-simplicity
-  ```
-
-  **Verify installation:**
-  ```bash
-  hal-simplicity --version
-  ```
-
-  **What hal-simplicity does:**
-  - Computes sighash for Simplicity transactions (the NEW method!)
-  - Generates addresses from Simplicity programs
-  - Parses and inspects Simplicity programs
-  - Creates and decodes Simplicity transactions
-
-  **Code Reference:**
-  - hal-simplicity sighash implementation: [`test.rs`](../test.rs#L138-L256) (in parent directory)
-  - The sighash command builds `ElementsEnv` and calls `c_tx_env().sighash_all()`
-  - Under the hood: [`rust-simplicity/simplicity-sys/src/c_jets/c_env/elements.rs`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/simplicity-sys/src/c_jets/c_env/elements.rs#L150-L153)
-
-  ### e) Install simplicity_tx_tool
-
-  simplicity_tx_tool builds complete Simplicity transactions with proper witness encoding. It uses the **same taproot construction as hal-simplicity and Web IDE**, ensuring compatibility.
-
-  ```bash
-  cargo install --git https://github.com/iajhff/simplicitytxtool
-  ```
-
-  **Verify installation:**
-  ```bash
-  simplicity_tx_tool --help
-  ```
-
-  **What simplicity_tx_tool does:**
-  - Builds complete transactions from contract + witness + UTXO data
-  - Handles control block generation automatically
-  - Encodes witness stack properly: `[witness_bytes, program_bytes, cmr, control_block]`
-  - Compatible with hal-simplicity addresses (uses same internal key)
-
-  **Code Reference:**
-  - Based on simfony library and Web IDE code
-  - Uses same taproot construction as Web IDE: [`simplicity-webide/src/util.rs`](https://github.com/BlockstreamResearch/simplicity-webide/blob/master/src/util.rs#L155-L219)
-
-  ### Verification
-
-  Verify all tools are installed:
-
-  ```bash
-  # Check all tools
-  simc --help
-  elements-cli --help
-  hal --version
-  hal-simplicity --version
-  simplicity_tx_tool --help
-
-  # All should return successfully
-  echo "All tools installed successfully"
-  ```
+- Internal Key: `f5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2` (x-only pub key (not spendable))
+- Control Block: `bef5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2` (derived from internal key)
+- Testnet L-BTC Asset ID: `144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49`
+- Testnet Genesis Hash: `a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1`
 
 ---
 
-## 4. Deploying Simple Contract (CLI)
-
-  This section covers deploying a simple Simplicity contract that requires no witness data (always evaluates to `true`).
-
-  ### a) Writing the Contract
-
-  Create a simple contract that always succeeds:
-
-  ```bash
-  cat > simple.simf << 'EOF'
-  fn main() {
-      ()  
-  }
-  EOF
-  ```
-
-  ### b) Compile Contract and Generate Address
-
-  **Compile the contract:**
-  ```bash
-  simc simple.simf
-  ```
-
-  This outputs base64-encoded Simplicity bytecode. Copy the output (e.g., `JA==`).
-
-  **Generate address and get program info:**
-  ```bash
-  hal-simplicity simplicity simplicity info <base64_program>
-  ```
-
-  Replace `<base64_program>` with the output from simc.
-
-  **Output:**
-  ```json
-  {
-    "cmr": "c40a10263f7436b4160acbef1c36fba4be4d95df181a968afeab5eac247adff7",
-    "liquid_testnet_address_unconf": "tex1pjj4anx9xlvl05v3g9vwtcez5xsdvseprv53vnhv4f2deymtnd5rs8prcsy",
-    ...
-  }
-  ```
-
-  **Save these values:**
-  - Address: `tex1p...` (for funding)
-  - CMR: `c40a10263...` (for reference)
-
-  ### c) Fund the Contract
-
-  **Use the faucet:**
-  ```bash
-  curl "https://liquidtestnet.com/faucet?address=<your_address>&action=lbtc"
-  ```
-
-  Replace `<your_address>` with your tex1p... address.
-
-  **Wait 30-60 seconds** for confirmation, then check the funding transaction:
-
-  ```bash
-  curl "https://blockstream.info/liquidtestnet/api/address/<your_address>/txs"
-  ```
-
-  **From the output, note:**
-  - `txid` - The funding transaction ID
-  - `vout` - Output index (usually 0)  
-  - `value` - Amount in satoshis (100000 from faucet)
-
-  **Check transaction status:**
-  ```bash
-  curl "https://blockstream.info/liquidtestnet/api/tx/<funding_txid>/status"
-  ```
-
-  ### d) Generate Destination Address
-
-  **Generate a new address:**
-  ```bash
-  elements-cli -chain=liquidtestnet getnewaddress
-  ```
-
-  This returns a confidential address. **Get the unconfidential version:**
-  ```bash
-  elements-cli -chain=liquidtestnet getaddressinfo <confidential_address>
-  ```
-
-  Look for the `"unconfidential"` field in the output (starts with `tex1q...`). This is your destination address.
-
-  ### e) Build and Broadcast Transaction
-
-  Use `simplicity_tx_tool` to build the complete transaction:
-
-  ```bash
-  simplicity_tx_tool build-tx simple.simf <funding_txid> 0 100000 <destination_address> 1000 empty.wit
-  ```
-
-  **Replace:**
-  - `<funding_txid>` - Transaction ID from step (c)
-  - `<destination_address>` - Unconfidential address from step (d)
-
-  **What this does:**
-  - Compiles the contract
-  - Builds transaction with witness stack: `[witness_bytes, program_bytes, cmr, control_block]`
-  - Uses same taproot construction as hal-simplicity (compatible!)
-  - Outputs complete transaction hex
-
-  **Output:** Transaction hex ready to broadcast
-
-  **Broadcast the transaction:**
-  ```bash
-  curl -X POST "https://blockstream.info/liquidtestnet/api/tx" -d "<transaction_hex>"
-  ```
-
-  **Response:** Transaction ID (txid)
-
-  ### f) Check Transaction Status
-
-  **Check confirmation:**
-  ```bash
-  curl "https://blockstream.info/liquidtestnet/api/tx/<txid>/status"
-  ```
-
-  **Wait ~30-60 seconds** and check again if not confirmed.
-
-  **Output:**
-  ```json
-  {
-    "confirmed": true,
-    "block_height": 2123456
-  }
-  ```
-
-  **View on explorers:**
-  - Blockstream: `https://blockstream.info/liquidtestnet/tx/<txid>`
-  - Mempool.space: `https://liquid.network/testnet/tx/<txid>`
-
-  ---
-
-  ### Summary: Simple Contract Deployment
-
-  **Complete workflow:**
-  1. Write contract (`simple.simf`)
-  2. Compile and generate address (simc + hal-simplicity)
-  3. Fund address (faucet)
-  4. Generate destination (`elements-cli getnewaddress`)
-  5. Build and broadcast (`simplicity_tx_tool build-tx`)
-
-  **Tools used:**
-  - simc (compile contracts to Simplicity bytecode)
-  - hal-simplicity (generate addresses from programs)
-  - elements-cli (generate destination addresses)
-  - simplicity_tx_tool (build complete transaction with witness stack)
-
-  **Why these tools work together:**
-  - hal-simplicity and simplicity_tx_tool use the **same taproot construction**
-  - Same internal key: `0xf5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2`
-  - Addresses generated by hal-simplicity can be spent using simplicity_tx_tool
-  - Compatible control blocks and witness stacks
+## Step 1: Create Program
+```bash
+cat > contract.simf << 'EOF'
+fn main() {
+    // Anyone can spend
+}
+EOF
+```
 
 ---
 
-## 5. Deploying Contract with Witness (CLI)
+## Step 2: Generate BASE64
+```bash
+simc contract.simf
+Program:
+JA==
+```
 
-  This section covers deploying a P2PK (Pay-to-Public-Key) contract that requires a signature witness.
+## Step 3: Get Program Information 
+```bash
+hal-simplicity simplicity simplicity info JA==
+{
+  "jets": "core",
+  "commit_base64": "JA==",
+  "commit_decode": "unit",
+  "type_arrow": "1 → 1",
+  "cmr": "c40a10263f7436b4160acbef1c36fba4be4d95df181a968afeab5eac247adff7",
+  "liquid_address_unconf": "ex1pjj4anx9xlvl05v3g9vwtcez5xsdvseprv53vnhv4f2deymtnd5rsxc3lpt",
+  "liquid_testnet_address_unconf": "tex1pjj4anx9xlvl05v3g9vwtcez5xsdvseprv53vnhv4f2deymtnd5rs8prcsy",
+  "is_redeem": false
+}%  
+```
 
-  We'll use the example files from `examples/`:
-  - `p2pk.simf` - The contract code
-  - `p2pk.args` - The public key parameter
-  - `p2pk.wit` - The signature witness (you'll generate this)
+---
 
-  ### a) The Contract Files
+## Step 4: Set Variables for Program Information
+```bash
+PROGRAM_B64=$(simc contract.simf 2>&1 | grep -A1 "Program:" | tail -1)
+echo "Program (base64): $PROGRAM_B64"
+CMR=$(hal-simplicity simplicity simplicity info "$PROGRAM_B64" 2>&1 | jq -r '.cmr')
+echo "CMR: $CMR"
+ADDRESS=$(hal-simplicity simplicity simplicity info "$PROGRAM_B64" 2>&1 | jq -r '.liquid_testnet_address_unconf')
+echo "Address: $ADDRESS"
+PROGRAM_HEX=$(echo -n "$PROGRAM_B64" | base64 -d | xxd -p | tr -d '\n')
+echo "Program (hex): $PROGRAM_HEX"
+CONTROL_BLOCK="bef5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2"
+```
 
-  **Contract: `examples/p2pk.simf`**
-  ```rust
-  /*
-  * PAY TO PUBLIC KEY
-  *
-  * The coins move if the person with the given public key signs the transaction.
-  */
-  fn main() {
-      jet::bip_0340_verify((param::ALICE_PUBLIC_KEY, jet::sig_all_hash()), witness::ALICE_SIGNATURE)
-  }
-  ```
+---
 
-  **Parameters: `examples/p2pk.args`**
-  ```json
-  {
-      "ALICE_PUBLIC_KEY": {
-          "value": "0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
-          "type": "Pubkey"
-      }
-  }
-  ```
-
-  **Witness Template: `examples/p2pk.wit`**
-  ```json
-  {
-      "ALICE_SIGNATURE": {
-          "value": "0x<your_signature_here>",
-          "type": "Signature"
-      }
-  }
-  ```
-
-  **Explanation:**
-  - `param::ALICE_PUBLIC_KEY` - The public key from the .args file
-  - `jet::sig_all_hash()` - Gets the transaction sighash
-    - *Implementation*: Accesses precomputed sighash from `ElementsEnv` transaction environment
-  - `jet::bip_0340_verify()` - Verifies the BIP-340 Schnorr signature
-    - *Implementation*: [`jets-secp256k1.c#L649`](https://github.com/BlockstreamResearch/rust-simplicity/blob/master/simplicity-sys/depend/simplicity/jets-secp256k1.c#L649-L665) - calls libsecp256k1's `secp256k1_schnorrsig_verify`
-  - `witness::ALICE_SIGNATURE` - The signature you'll provide
-
-  **Note**: For your own contract, replace the pubkey with your own from `hal key generate`
-
-  ### b) Compile and Generate Address
-
-  For this example, we'll use `simple_p2pk.simf` (embedded pubkey, no parameters needed):
-
-  **Compile the contract:**
-  ```bash
-  simc simple_p2pk.simf
-  ```
-
-  This outputs base64-encoded Simplicity bytecode. Copy the output.
-
-  **Generate address:**
-  ```bash
-  hal-simplicity simplicity simplicity info <base64_program>
-  ```
-
-  Replace `<base64_program>` with simc output.
-
-  **Output:**
-  ```json
-  {
-    "cmr": "119eec27a5a51b49680bcee62f9f757676bfce6ba35917d44fd08fa2e4a61610",
-    "liquid_testnet_address_unconf": "tex1p8ng5dmfam5a6ljkyu646ym6yn6r9pfhylpn4gzl67p0hymc83yzs3mccce",
-    ...
-  }
-  ```
-
-  Copy the address for funding.
-
-  ### c) Fund the Contract
-
-  **Use the faucet:**
-  ```bash
-  curl "https://liquidtestnet.com/faucet?address=<your_address>&action=lbtc"
-  ```
-
-  Replace `<your_address>` with your tex1p... address.
-
-  **Wait for confirmation** (~1 minute), then check the funding transaction:
-
-  ```bash
-  curl "https://blockstream.info/liquidtestnet/api/address/<your_address>/txs"
-  ```
-
-  **From the output, note:**
-  - `txid` - The funding transaction ID
-  - `vout` - Output index (usually 0)
-  - `value` - Amount in satoshis (100000 from faucet)
-
-  ### d) Generate Destination Address
-
-  **Generate a new address:**
-  ```bash
-  elements-cli -chain=liquidtestnet getnewaddress
-  ```
-
-  This returns a confidential address. **Get the unconfidential version:**
-  ```bash
-  elements-cli -chain=liquidtestnet getaddressinfo <confidential_address>
-  ```
-
-  Look for the `"unconfidential"` field in the output (starts with `tex1q...`). This is your destination address.
-
-  ### e) Compute Sighash and Sign (Using hal-simplicity - THE NEW METHOD!)
-
-  For contracts with witness data, you need to sign the transaction.
-
-  **Build unsigned transaction** (for sighash computation):
-
-  Create `tx.json`:
-  ```json
-  {
-    "version": 2,
-    "locktime": 0,
-    "input": [{"txid": "<funding_txid>", "vout": 0, "sequence": 4294967294}],
-    "output": [
-      {"asset": "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49", "value": 99000, "script_pubkey": "<destination_scriptpubkey>"},
-      {"asset": "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49", "value": 1000, "script_pubkey": ""}
-    ]
-  }
-  ```
-
-  Create transaction hex:
-  ```bash
-  hal-elements elements tx create tx.json --raw-stdout
-  ```
-
-  **Compute sighash:** (may not merged into main yet)
-  ```bash
-  hal-simplicity simplicity sighash <tx_hex> 0 <cmr> <control_block> -v 100000 -a 144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49 --utxo-script <funding_scriptpubkey> -g a771da8e52ee6ad581ed1e9a99825e5b3b7992225534eaa2ae23244fe26ab1c1 -s <private_key>
-  ```
-OR
+## Step 5: Verify Values
 
 ```bash
-simplicity_tx_tool sighash <contract.simf> <txid> <vout> <value> <destination> <fee>
+echo "=== All Values ==="
+echo "Program (hex): $PROGRAM_HEX"
+echo "CMR:           $CMR"
+echo "Control Block: $CONTROL_BLOCK"
+echo "Address:       $ADDRESS"
 ```
-  
-
-  **Note:** Computing the control block requires code. For simplicity, use `simplicity_tx_tool` which computes it automatically (next step).
-
-  ### f) Create Witness File
-
-  Create a witness file with a dummy signature (for testing):
-
-  ```bash
-  cat > witness.wit << 'EOF'
-  {
-      "SIGNATURE": {
-          "value": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-          "type": "Signature"
-      }
-  }
-  EOF
-  ```
-
-  **For real deployment:** Compute the actual signature using hal-simplicity sighash (see step e), then update this file.
-
-  ### g) Build and Broadcast Transaction
-
-  Use `simplicity_tx_tool` to build the complete transaction:
-
-  ```bash
-  simplicity_tx_tool build-tx simple_p2pk.simf <funding_txid> 0 100000 <destination_address> 1000 witness.wit
-  ```
-
-  **Replace:**
-  - `<funding_txid>` - Transaction ID from step (c)
-  - `<destination_address>` - Unconfidential address from step (d)
-
-  **What this does:**
-  - Compiles contract with witness
-  - Computes control block from CMR
-  - Builds transaction with witness stack: `[witness_bytes, program_bytes, cmr, control_block]`
-  - Uses same taproot construction as hal-simplicity (compatible!)
-  - Outputs complete transaction hex
-
-  **Output:** Transaction hex
-
-  **Broadcast:**
-  ```bash
-  curl -X POST "https://blockstream.info/liquidtestnet/api/tx" -d "<transaction_hex>"
-  ```
-
-  **Response:** Transaction ID (txid)
-
-  ### h) Check Transaction Status
-
-  **Check confirmation:**
-  ```bash
-  curl "https://blockstream.info/liquidtestnet/api/tx/<txid>/status"
-  ```
-
-  **Wait ~30-60 seconds** and check again if not confirmed.
-
-  **Output:**
-  ```json
-  {
-    "confirmed": true,
-    "block_height": 2123456
-  }
-  ```
-
-  **View on explorers:**
-  - Blockstream: `https://blockstream.info/liquidtestnet/tx/<txid>`
-  - Mempool.space: `https://liquid.network/testnet/tx/<txid>`
-
-  ---
-
-
-  **Important:** Make sure whatever tool you use has the same internal key accross the tool-chain!
 
 ---
 
+## Step 6: Fund Contract Address
+```bash
+curl "https://liquidtestnet.com/faucet?address=${ADDRESS}&action=lbtc"
+```
+
+**Wait 15-30 seconds (testnet confirmations are fast) and check for the UTXO from your funding transaction**
+```bash
+curl -s "https://blockstream.info/liquidtestnet/api/address/${ADDRESS}/utxo" | jq '.'
+```
+
+---
+
+## Step 7: Get UTXO of Transaction
+```bash
+curl -s "https://blockstream.info/liquidtestnet/api/address/${ADDRESS}/utxo" | jq '.'
+```
+
+**Extract UTXO details and set as variables for easier use:**
+
+```bash
+TXID=$(curl -s "https://blockstream.info/liquidtestnet/api/address/${ADDRESS}/utxo" | jq -r '.[0].txid')
+VOUT=$(curl -s "https://blockstream.info/liquidtestnet/api/address/${ADDRESS}/utxo" | jq -r '.[0].vout')
+INPUT_VALUE=$(curl -s "https://blockstream.info/liquidtestnet/api/address/${ADDRESS}/utxo" | jq -r '.[0].value')
+FEE=500
+AMOUNT=$((INPUT_VALUE - FEE))
+ASSET_ID="144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49"
+DESTINATION="tex1qjnr7j6u7tzh4q7djumh9rtldv5q7yllxuhaasp"
+```
+
+## Step 8: Create Transaction JSON
+
+```bash
+cat > transaction.json << EOF
+{
+  "version": 2,
+  "locktime": {"Blocks": 0},
+  "inputs": [{
+    "txid": "$TXID",
+    "vout": $VOUT,
+    "script_sig": {"hex": ""},
+    "sequence": 0,
+    "is_pegin": false,
+    "has_issuance": false,
+    "witness": {
+      "script_witness": [
+        "",
+        "$PROGRAM_HEX",
+        "$CMR",
+        "$CONTROL_BLOCK"
+      ]
+    }
+  }],
+  "outputs": [
+    {
+      "script_pub_key": {"address": "$DESTINATION"},
+      "asset": {"type": "explicit", "asset": "$ASSET_ID"},
+      "value": {"type": "explicit", "value": $AMOUNT},
+      "nonce": {"type": "null"}
+    },
+    {
+      "script_pub_key": {"hex": ""},
+      "asset": {"type": "explicit", "asset": "$ASSET_ID"},
+      "value": {"type": "explicit", "value": $FEE},
+      "nonce": {"type": "null"}
+    }
+  ]
+}
+EOF
+```
+
+---
+
+## Step 9: Create Transaction HEX
+```bash
+TX_HEX=$(cat transaction.json | hal-simplicity simplicity tx create)
+```
+
+---
+
+## Step 10: Broadcast Your Transaction
+```bash
+RESULT=$(echo "$TX_HEX" | curl -s -X POST "https://blockstream.info/liquidtestnet/api/tx" -d @-)
+echo "$RESULT"
+```
+
+# Simplicity P2PK Transaction with Sighash and Witness
+
+## Step 1: Generate Test Keypair
+
+```bash
+# Generate a new keypair using hal-sig
+KEYPAIR=$(./hal-sig simplicity keypair generate)
+echo "$KEYPAIR" | jq '.'
+```
+
+**Extract the keys:**
+```bash
+TEST_PRIVKEY=$(echo "$KEYPAIR" | jq -r '.secret')
+TEST_PUBKEY=$(echo "$KEYPAIR" | jq -r '.x_only')
+
+echo "Private Key: $TEST_PRIVKEY"
+echo "Public Key (x-only): $TEST_PUBKEY"
+```
+
+---
+
+## Step 2: Create P2PK Contract Source
+
+**Important: Run this in the same terminal session where you set the variables!**
+
+```bash
+cat > p2pk_contract.simf <<EOF
+fn main() {
+    let pubkey: Pubkey = 0x${TEST_PUBKEY};
+    let msg: u256 = jet::sig_all_hash();
+    let sig: Signature = witness::SIG;
+    jet::bip_0340_verify((pubkey, msg), sig);
+}
+EOF
+```
+
+**Verify contract:**
+```bash
+cat p2pk_contract.simf
+```
+
+**Expected:** Should show your public key in the 0x... field
+
+---
+
+## Step 3: Compile Contract
+
+```bash
+simc p2pk_contract.simf
+```
+
+---
+
+## Step 4: Generate CMR and Address
+
+```bash
+PROGRAM_B64=$(simc p2pk_contract.simf 2>&1 | awk 'NR==2')
+CMR=$(./hal-sig simplicity simplicity info "$PROGRAM_B64" 2>&1 | jq -r '.cmr')
+ADDRESS=$(./hal-sig simplicity simplicity info "$PROGRAM_B64" 2>&1 | jq -r '.liquid_testnet_address_unconf')
+PROGRAM_HEX=$(echo -n "$PROGRAM_B64" | base64 -d | xxd -p | tr -d '\n')
+CONTROL_BLOCK="bef5919fa64ce45f8306849072b26c1bfdd2937e6b81774796ff372bd1eb5362d2"
+
+echo "=== Contract Values ==="
+echo "CMR:     $CMR"
+echo "Address: $ADDRESS"
+echo "Program: ${PROGRAM_HEX:0:50}..."
+```
+
+---
+
+## Step 5: Fund the Address
+
+```bash
+curl "https://liquidtestnet.com/faucet?address=${ADDRESS}&action=lbtc"
+```
+
+**Wait 60 seconds for confirmation:**
+```bash
+echo "Waiting 60 seconds..." && sleep 60
+```
+
+---
+
+## Step 6: Get UTXO Details
+
+```bash
+TXID=$(curl -s "https://blockstream.info/liquidtestnet/api/address/${ADDRESS}/utxo" | jq -r '.[0].txid')
+VOUT=$(curl -s "https://blockstream.info/liquidtestnet/api/address/${ADDRESS}/utxo" | jq -r '.[0].vout')
+INPUT_VALUE=$(curl -s "https://blockstream.info/liquidtestnet/api/address/${ADDRESS}/utxo" | jq -r '.[0].value')
+
+echo "TXID:  $TXID"
+echo "VOUT:  $VOUT"
+echo "VALUE: $INPUT_VALUE"
+```
+
+---
+
+## Step 7: Set Transaction Parameters
+
+```bash
+DESTINATION="tex1qjnr7j6u7tzh4q7djumh9rtldv5q7yllxuhaasp"
+FEE=500
+AMOUNT=$((INPUT_VALUE - FEE))
+ASSET_ID="144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49"
+
+echo "Destination: $DESTINATION"
+echo "Amount: $AMOUNT"
+echo "Fee: $FEE"
+```
+
+---
+
+## Step 8: Create Unsigned Transaction JSON
+
+```bash
+cat > unsigned_tx.json <<EOF
+{
+  "version": 2,
+  "locktime": {"Blocks": 0},
+  "inputs": [{
+    "txid": "$TXID",
+    "vout": $VOUT,
+    "script_sig": {"hex": ""},
+    "sequence": 0,
+    "is_pegin": false,
+    "has_issuance": false,
+    "witness": {
+      "script_witness": [
+        "",
+        "$PROGRAM_HEX",
+        "$CMR",
+        "$CONTROL_BLOCK"
+      ]
+    }
+  }],
+  "outputs": [
+    {
+      "script_pub_key": {"address": "$DESTINATION"},
+      "asset": {"type": "explicit", "asset": "$ASSET_ID"},
+      "value": {"type": "explicit", "value": $AMOUNT},
+      "nonce": {"type": "null"}
+    },
+    {
+      "script_pub_key": {"hex": ""},
+      "asset": {"type": "explicit", "asset": "$ASSET_ID"},
+      "value": {"type": "explicit", "value": $FEE},
+      "nonce": {"type": "null"}
+    }
+  ]
+}
+EOF
+```
+
+---
+
+## Step 9: Calculate Sighash and Sign
+
+**Get the scriptPubKey from blockchain:**
+```bash
+# Query the funding transaction to get scriptPubKey
+SCRIPT_PUBKEY=$(curl -s "https://blockstream.info/liquidtestnet/api/tx/${TXID}" | jq -r '.vout[0].scriptpubkey')
+echo "ScriptPubKey: $SCRIPT_PUBKEY"
+```
+
+**Convert unsigned transaction to hex:**
+```bash
+UNSIGNED_TX_HEX=$(cat unsigned_tx.json | ./hal-sig simplicity tx create)
+```
+
+**Calculate sighash AND sign**
+```bash
+SIGHASH_RESULT=$(./hal-sig simplicity simplicity sighash \
+  "$UNSIGNED_TX_HEX" \
+  0 \
+  "$CMR" \
+  "$CONTROL_BLOCK" \
+  -i "${SCRIPT_PUBKEY}:${ASSET_ID}:0.001" \
+  -x "$TEST_PRIVKEY" \
+  -p "$TEST_PUBKEY")
+
+echo "$SIGHASH_RESULT" | jq '.'
+```
+
+**Expected output:**
+```json
+{
+  "sighash": "abc123...",
+  "signature": "def456...",
+  "valid_signature": null
+}
+```
+
+**Extract the signature:**
+```bash
+SIGNATURE=$(echo "$SIGHASH_RESULT" | jq -r '.signature')
+echo "Signature: $SIGNATURE"
+```
+
+**Expected:** 128 hex characters (64 bytes - Schnorr signature)
+
+---
+
+## Step 11: Create Final Transaction with Witness
+
+```bash
+cat > final_tx.json <<EOF
+{
+  "version": 2,
+  "locktime": {"Blocks": 0},
+  "inputs": [{
+    "txid": "$TXID",
+    "vout": $VOUT,
+    "script_sig": {"hex": ""},
+    "sequence": 0,
+    "is_pegin": false,
+    "has_issuance": false,
+    "witness": {
+      "script_witness": [
+        "$SIGNATURE",
+        "$PROGRAM_HEX",
+        "$CMR",
+        "$CONTROL_BLOCK"
+      ]
+    }
+  }],
+  "outputs": [
+    {
+      "script_pub_key": {"address": "$DESTINATION"},
+      "asset": {"type": "explicit", "asset": "$ASSET_ID"},
+      "value": {"type": "explicit", "value": $AMOUNT},
+      "nonce": {"type": "null"}
+    },
+    {
+      "script_pub_key": {"hex": ""},
+      "asset": {"type": "explicit", "asset": "$ASSET_ID"},
+      "value": {"type": "explicit", "value": $FEE},
+      "nonce": {"type": "null"}
+    }
+  ]
+}
+EOF
+```
+
+**Verify witness stack:**
+```bash
+cat final_tx.json | jq '.inputs[0].witness.script_witness | map(length)'
+```
+
+**Expected:** `[128, <varies>, 64, 66]` (signature is 128 hex chars)
+
+---
+
+## Step 12: Convert to Raw Hex
+
+```bash
+TX_HEX=$(cat final_tx.json | ./hal-sig simplicity tx create)
+echo "Transaction hex length: ${#TX_HEX}"
+echo "First 100 chars: ${TX_HEX:0:100}..."
+```
+
+---
+
+## Step 13: Broadcast Transaction
+
+```bash
+RESULT=$(echo "$TX_HEX" | curl -s -X POST "https://blockstream.info/liquidtestnet/api/tx" -d @-)
+echo "$RESULT"
+```
+
+## Alternative: Using .wit Files (SimplicityHL Method)
+
+**This shows how SimplicityHL officially handles witnesses**
+
+### Create Witness File
+
+**After getting the sighash, create witness.wit:**
+
+```bash
+cat > witness.wit <<EOF
+{
+  "SIG": {
+    "value": "$SIGNATURE"
+  }
+}
+EOF
+```
+
+**For our P2PK contract:**
+```json
+{
+  "SIG": {
+    "value": "abc123...def456..."
+  }
+}
+```
+
+**The witness name `SIG` matches the contract:**
+```rust
+fn main() {
+    let sig: Signature = witness::SIG;  // ← Must match!
+    ...
+}
+```
+
+### Compile with Witness
+
+**If simc has serde feature enabled:**
+
+```bash
+simc p2pk_contract.simf witness.wit
+```
+
+**Output:**
+```
+Program:
+<base64_program>
+
+Witness:
+<base64_witness>
+```
