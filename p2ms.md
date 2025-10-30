@@ -1,8 +1,6 @@
-# Complete Simplicity 2-of-3 Multisig Guide
+# Simplicity 2-of-3 Multisig Guide
 
-**Everything you need to deploy and spend a Simplicity multisig contract on Liquid testnet**
-
-No prior setup required. Follow this guide from top to bottom.
+**Deploy and spend a Simplicity multisig contract on Liquid testnet**
 
 ---
 
@@ -109,8 +107,6 @@ elementsd -chain=liquidtestnet -daemon
 # Check it's ready
 elements-cli -chain=liquidtestnet getblockchaininfo
 ```
-
-**Note:** You don't need full sync - just wait for the index to load!
 
 ### 2. Create Wallet
 
@@ -618,7 +614,6 @@ echo "View on explorer: https://blockstream.info/liquidtestnet/tx/$TXID"
 
 ```bash
 # Wait a bit
-sleep 30
 
 # Check if confirmed
 curl -s "https://blockstream.info/liquidtestnet/api/tx/${TXID}" | jq '.status'
