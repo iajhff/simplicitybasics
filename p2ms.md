@@ -43,7 +43,7 @@ which elements-cli
 elementsd --version
 ```
 
-**Option B: Build from Source (Takes ~20 minutes)**
+**Option B: Build from Source**
 
 ```bash
 # Clone Elements repository
@@ -171,7 +171,7 @@ echo "Key 3 pubkey: $PUBKEY_3"
 
 ### 2-of-3 Multisig Contract (p2ms.simf)
 
-Create this file: `~/p2ms.simf`
+Create this file: `p2ms.simf`
 
 ```rust
 /*
@@ -224,7 +224,7 @@ fn main() {
 }
 ```
 
-**Save this to:** `~/p2ms.simf`
+**Save this to:** `p2ms.simf`
 
 ### What This Contract Does
 
@@ -238,7 +238,6 @@ fn main() {
 ## Compile Contract
 
 ```bash
-cd ~
 
 # Compile the contract
 simc p2ms.simf
@@ -472,19 +471,19 @@ echo "Signature 3: ${SIGNATURE_3:0:64}..."
 
 ```bash
 # Download the witness template from GitHub
-curl -o ~/p2ms.wit https://raw.githubusercontent.com/BlockstreamResearch/SimplicityHL/master/examples/p2ms.wit
+curl -o p2ms.wit https://raw.githubusercontent.com/BlockstreamResearch/SimplicityHL/master/examples/p2ms.wit
 
 # Copy template and substitute signatures
-cp ~/p2ms.wit ~/p2ms_signed.wit
+cp p2ms.wit p2ms_signed.wit
 
 # Replace first Some(...) with first signature
-sed -i '' "s/Some([^)]*)/Some(0x$SIGNATURE_1)/" ~/p2ms_signed.wit
+sed -i '' "s/Some([^)]*)/Some(0x$SIGNATURE_1)/" p2ms_signed.wit
 
 # Replace last Some(...)] with second signature
-sed -i '' "s/Some([^)]*)]/Some(0x$SIGNATURE_3)]/" ~/p2ms_signed.wit
+sed -i '' "s/Some([^)]*)]/Some(0x$SIGNATURE_3)]/" p2ms_signed.wit
 
 # Verify
-cat ~/p2ms_signed.wit
+cat p2ms_signed.wit
 ```
 
 **Expected output:**
@@ -509,7 +508,7 @@ cat ~/p2ms_signed.wit
 ```bash
 # Compile contract WITH witness to create "satisfied" program
 # This combines the program logic with the runtime witness data
-simc ~/p2ms.simf ~/p2ms_signed.wit
+simc p2ms.simf p2ms_signed.wit
 ```
 
 **Output:**
@@ -528,7 +527,7 @@ Witness:
 
 **Extract both:**
 ```bash
-COMPILED_WITH_WITNESS=$(simc ~/p2ms.simf ~/p2ms_signed.wit)
+COMPILED_WITH_WITNESS=$(simc p2ms.simf p2ms_signed.wit)
 
 # Extract program (line 2 of simc output)
 PROGRAM=$(echo "$COMPILED_WITH_WITNESS" | sed -n '2p')
