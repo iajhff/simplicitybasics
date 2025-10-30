@@ -28,11 +28,11 @@
 # Visit GitHub releases page:
 # https://github.com/ElementsProject/elements/releases
 
-# Download the latest release for your OS (macOS example):
-# elements-<version>-osx64.tar.gz
+# Download the latest release for your OS :
+# elements-<version>-.tar.gz
 
 # Extract and install
-tar -xzf elements-*-osx64.tar.gz
+tar -xzf elements-*-.tar.gz
 sudo cp -r elements-*/bin/* /usr/local/bin/
 
 # Verify
