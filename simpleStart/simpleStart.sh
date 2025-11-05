@@ -15,6 +15,7 @@ BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # Global configuration
+KEEP_DOCKER=true
 ELEMENTS_VERSION=""
 RPC_USERNAME=""
 RPC_PASSWORD=""
@@ -121,6 +122,13 @@ configure_elements() {
         ELEMENTS_P2P_PORT="$port"
     fi
     echo "[SELECTED] Using: $ELEMENTS_P2P_PORT"
+
+    echo -n "Elements data folder [default: $ELEMENTS_DATA_DIR]: "
+    read -r port
+    if [[ -n "$port" && "$port" != "Y" && "$port" != "y" ]]; then
+        ELEMENTS_DATA_DIR="$port"
+    fi
+    echo "[SELECTED] Using: $ELEMENTS_DATA_DIR"
 }
 
 docker_setup_elements() {
@@ -156,7 +164,12 @@ docker_setup_elements() {
         fi
         
         git clone "$repo_url" "$repo_dir"
-        cd "$repo_dir/elementsd"
+        cd "$repo_dir/elementsd" || { echo "Directory $repo_dir/elementsd not found"; exit 1; }
+
+        # adjustment on elemetsd/Dockerfile needed!
+        sed -i.bak "s/^ARG ELEMENTS_VERSION.*$/ARG ELEMENTS_VERSION=\"$ELEMENTS_VERSION\"/" Dockerfile
+        # rm -f Dockerfile.bak
+        #
         $docker_cmd build -t "$image_tag" .
         cd - >/dev/null
         rm -rf "$repo_dir"
@@ -306,9 +319,64 @@ main() {
         echo "Installation cancelled."
         exit 0
     fi
+
+    # Step 1: Ask user whether to keep existing repo_dir or re-clone it
+    print_header "Step 1/5: Configure build behavior"
+    echo "This step determines whether to reuse the existing Elements repository directory."
+    echo
+    echo "Current default setting: KEEP_DOCKER=${KEEP_DOCKER}"
+
+    # Adjust prompt according to current default KEEP_DOCKER value
+    if [[ "$KEEP_DOCKER" == true ]]; then
+        prompt="Do you want to keep the existing repository directory? (Y/n): "
+    else
+        prompt="Do you want to keep the existing repository directory? (y/N): "
+    fi
+
+    read -p "$prompt" user_input
+
+    # Interpret user choice; default applies if no input is given
+    if [[ -n "$user_input" ]]; then
+        case "$user_input" in
+            [Yy]* )
+                KEEP_DOCKER=true
+                ;;
+            [Nn]* )
+                KEEP_DOCKER=false
+                ;;
+            * )
+                echo "Invalid input, keeping default: KEEP_DOCKER=${KEEP_DOCKER}"
+                ;;
+        esac
+    else
+        echo "No input provided, using default: KEEP_DOCKER=${KEEP_DOCKER}"
+    fi
+
+    echo "KEEP_DOCKER is set to: ${KEEP_DOCKER}"
+    echo
+
+    ##
+    # Step 2: Ask user for Elements version
+    print_header "Step 2/5: Configure Elements version"
+    echo "This step defines which version of Elements should be used."
+    echo
+    echo "Current default setting: ELEMENTS_VERSION=${ELEMENTS_VERSION}"
+
+    # Prompt the user with the current default prefilled as hint
+    read -p "Enter the Elements version to use [${ELEMENTS_VERSION}]: " user_input
+
+    # If user provides input, override the default value
+    if [[ -n "$user_input" ]]; then
+        ELEMENTS_VERSION="$user_input"
+    else
+        echo "No input provided, using default: ELEMENTS_VERSION=${ELEMENTS_VERSION}"
+    fi
+
+    echo "ELEMENTS_VERSION is set to: ${ELEMENTS_VERSION}"
+    echo
     
-    # Step 1: Elements Core
-    print_header "Step 1/3: Installing Elements Core"
+    # Step 3: Elements Core
+    print_header "Step 3/5: Installing Elements Core"
     echo -e "${BOLD}Command:${NC} ${YELLOW}docker run elementsd${NC}"
     echo "Installing Elements Core regtest with 21M L-BTC initial funding."
     echo
@@ -325,16 +393,16 @@ main() {
         exit 1
     fi
     
-    # Step 2: SimplicityHL
-    print_header "Step 2/3: Installing SimplicityHL Compiler"
+    # Step 4: SimplicityHL
+    print_header "Step 4/5: Installing SimplicityHL Compiler"
     echo -e "${BOLD}Command:${NC} ${YELLOW}cargo install simc${NC}"
     echo "Installing Rust toolchain and SimplicityHL compiler placeholder."
     echo
     install_rust_toolchain
     install_simplicityhl_compiler
     
-    # Step 3: Helper Tools
-    print_header "Step 3/3: Installing Helper Tools"
+    # Step 5: Helper Tools
+    print_header "Step 5/5: Installing Helper Tools"
     echo -e "${BOLD}Command:${NC} ${YELLOW}cargo install hal-elements hal-simplicity${NC}"
     echo -e "${BOLD}Command:${NC} ${YELLOW}cargo install --git https://github.com/starkware-bitcoin/simply simply${NC}"
     echo "Installing transaction and contract analysis tools."
