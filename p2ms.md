@@ -73,13 +73,11 @@ simc --help
 
 **Note:** Installing `simplicityhl` from crates.io installs the `simc` compiler binary to `~/.cargo/bin/simc` automatically.
 
-### 3. Install hal-simplicity (PSET-enabled version)
-
+### 3. Install hal-simplicity
 ```bash
-# Clone the PSET-enabled fork
-git clone https://github.com/apoelstra/hal-simplicity.git
+
+git clone https://github.com/BlockstreamResearch/hal-simplicity/
 cd hal-simplicity
-git checkout 2025-10/pset-signer
 
 # Build
 cargo build --release
