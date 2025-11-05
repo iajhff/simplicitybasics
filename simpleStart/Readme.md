@@ -28,7 +28,7 @@
 
 ### Step 3: Development Tools
 - **Commands:** 
-  - `cargo install hal-elements hal-simplicity`
+  - `cargo install hal-simplicity`
   - `cargo install --git https://github.com/starkware-bitcoin/simply simply`
 - **Why:** Essential tools for contract analysis and deployment
 - **Result:** Complete Simplicity toolchain installed
@@ -84,7 +84,6 @@
 - Funded wallet: `dev` with 21,000,000 L-BTC
 - Funded address with 50 L-BTC for immediate testing
 - Development tools installed:
-  - **hal-elements**: Elements transaction decoder and analyzer
   - **hal-simplicity**: Simplicity contract analyzer and CMR calculator  
   - **simply**: Complete Simplicity workflow tool (build/test/deploy)
 - Shell aliases for easy access
@@ -119,20 +118,6 @@ my-simplicity-testnet/
 │   └── main.base64         # Same compiled witness
 ├── tests/                  # Testnet-specific tests
 └── witness/                # Testnet witness data
-```
-
-### Installed Development Tools
-
-#### hal-elements
-Elements transaction decoder and analyzer
-```bash
-# Transaction operations
-hal-elements elements tx decode <txhex>            # Decode raw transaction
-hal-elements elements tx create <json>             # Create transaction from JSON
-
-# Address operations  
-hal-elements elements address inspect <addr>       # Inspect Elements address
-hal-elements elements address create <script>      # Create address from script
 ```
 
 #### hal-simplicity
@@ -234,7 +219,6 @@ All commands work the same across platforms.
 1. Write contracts in `src/main.simf`
 2. Analyze with hal-simplicity tools
 3. Deploy with simply commands
-4. Monitor with hal-elements tools
 
 ## Files Created
 
