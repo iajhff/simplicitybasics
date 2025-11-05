@@ -58,7 +58,6 @@ check_existing_setup() {
     
     # Check development tools
     local missing_tools=()
-    if ! check_command hal-elements; then missing_tools+=("hal-elements"); fi
     if ! check_command hal-simplicity; then missing_tools+=("hal-simplicity"); fi
     if ! check_command simply; then missing_tools+=("simply"); fi
     if ! check_command simc; then missing_tools+=("simc"); fi
@@ -80,9 +79,6 @@ install_development_tools() {
     fi
     
     # Install tools
-    if ! check_command hal-elements; then
-        cargo install hal-elements
-    fi
     if ! check_command hal-simplicity; then
         cargo install hal-simplicity
     fi
@@ -262,7 +258,6 @@ docker exec elementsd elements-cli -rpcwallet=$wallet_name listunspent
 docker exec elementsd elements-cli -rpcwallet=$wallet_name sendtoaddress <address> <amount>
 
 # Development tools:
-hal-elements tx decode <txhex>
 hal-simplicity simplicity info <witness>
 simply build --entrypoint src/main.simf
 EOF
