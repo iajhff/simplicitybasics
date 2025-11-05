@@ -122,6 +122,13 @@ configure_elements() {
         ELEMENTS_P2P_PORT="$port"
     fi
     echo "[SELECTED] Using: $ELEMENTS_P2P_PORT"
+
+    echo -n "Elements data folder [default: $ELEMENTS_DATA_DIR]: "
+    read -r port
+    if [[ -n "$port" && "$port" != "Y" && "$port" != "y" ]]; then
+        ELEMENTS_DATA_DIR="$port"
+    fi
+    echo "[SELECTED] Using: $ELEMENTS_DATA_DIR"
 }
 
 docker_setup_elements() {
