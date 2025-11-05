@@ -1,6 +1,6 @@
 # Simplicity No Signature Contract
 
-- Requirements: hal-simplicity (https://github.com/apoelstra/hal-simplicity/tree/2025-10/sighash), curl, jq, base64, xxd
+- Requirements: hal-simplicity ([https://github.com/BlockstreamResearch/hal-simplicity/](https://github.com/BlockstreamResearch/hal-simplicity/)), curl, jq, base64, xxd
 
 ## Helpful Constants
 
