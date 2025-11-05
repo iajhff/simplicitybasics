@@ -1,5 +1,7 @@
 # Simplicity on Liquid: Getting Started
 
+The primary tool for this is hal-simplicity which is in active development so please consult h[ttps://github.com/BlockstreamResearch/hal-simplicity/](https://github.com/BlockstreamResearch/hal-simplicity/) for updates.
+
 The easiest way to deploy Simplicity smart contracts on Liquid testnet using the Web IDE. (Guide Not directly affiliated with Blockstream or Simplicity-Lang)
 
 [Developer Documentation](https://docs.simplicity-lang.org/documentation/how-simplicity-works/)
