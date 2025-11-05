@@ -287,10 +287,6 @@ install_simplicityhl_compiler() {
 install_helper_tools() {
     log_info "Installing helper tools..."
     
-    if ! check_command hal-elements; then
-        cargo install hal-elements
-    fi
-    
     if ! check_command hal-simplicity; then
         cargo install hal-simplicity
     fi
@@ -403,7 +399,7 @@ main() {
     
     # Step 5: Helper Tools
     print_header "Step 5/5: Installing Helper Tools"
-    echo -e "${BOLD}Command:${NC} ${YELLOW}cargo install hal-elements hal-simplicity${NC}"
+    echo -e "${BOLD}Command:${NC} ${YELLOW}cargo install hal-simplicity${NC}"
     echo -e "${BOLD}Command:${NC} ${YELLOW}cargo install --git https://github.com/starkware-bitcoin/simply simply${NC}"
     echo "Installing transaction and contract analysis tools."
     echo
