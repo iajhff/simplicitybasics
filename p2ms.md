@@ -76,7 +76,7 @@ simc --help
 ### 3. Install hal-simplicity
 ```bash
 
-git clone https://github.com/BlockstreamResearch/hal-simplicity/
+git clone https://github.com/BlockstreamResearch/hal-simplicity/ for pset you need https://github.com/apoelstra/hal-simplicity/tree/2025-10/pset-signer
 cd hal-simplicity
 
 # Build
