@@ -65,7 +65,7 @@ which elements-cli
 
 ```bash
 # Install SimplicityHL from crates.io (includes simc compiler)
-cargo install simplicityhl
+cargo install --features=serde simplicityhl
 
 # Verify simc is installed
 simc --help
